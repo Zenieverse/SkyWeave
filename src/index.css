@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@450;500;650&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+  /* Clean Minimalism Color System Overrides */
+  --color-indigo-50: #eff6ff;
+  --color-indigo-100: #dbeafe;
+  --color-indigo-200: #bfdbfe;
+  --color-indigo-300: #93c5fd;
+  --color-indigo-400: #60a5fa;
+  --color-indigo-500: #2563eb;
+  --color-indigo-600: #2563eb;
+  --color-indigo-650: #1d4ed8;
+  --color-indigo-700: #1d4ed8;
+  --color-indigo-800: #1e40af;
+  --color-indigo-900: #1e3a8a;
+  --color-indigo-950: #172554;
+
+  --color-zinc-50: #f8f9fa;
+  --color-zinc-100: #f1f3f5;
+  --color-zinc-150: #e9ecef;
+  --color-zinc-200: #dee2e6;
+  --color-zinc-205: #dee2e6;
+  --color-zinc-300: #ced4da;
+  --color-zinc-350: #adb5bd;
+  --color-zinc-400: #ced4da;
+  --color-zinc-450: #6c757d;
+  --color-zinc-500: #6c757d;
+  --color-zinc-600: #495057;
+  --color-zinc-650: #343a40;
+  --color-zinc-700: #343a40;
+  --color-zinc-800: #212529;
+  --color-zinc-805: #1a1cf0;
+  --color-zinc-810: #1a1c1d;
+  --color-zinc-850: #1c1d1f;
+  --color-zinc-900: #1c1d1f;
+  --color-zinc-950: #111213;
+
+  /* Soft shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+}
+
+/* Base custom styles to reinforce Clean Minimalism */
+body {
+  background-color: var(--color-zinc-50);
+  color: var(--color-zinc-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Clean, narrow custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-zinc-200);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-zinc-300);
+}
