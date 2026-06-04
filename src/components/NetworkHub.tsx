@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Wifi, 
   WifiOff, 
@@ -17,7 +17,11 @@ import {
   RefreshCw, 
   Signal, 
   Eye, 
-  AlertTriangle 
+  AlertTriangle,
+  Camera,
+  QrCode,
+  Check,
+  X
 } from 'lucide-react';
 import { MeshNode } from '../types';
 
@@ -46,6 +50,125 @@ export default function NetworkHub({
   const [newType, setNewType] = useState<'solar' | 'satellite_uplink' | 'drone_repeater' | 'community_server'>('solar');
   const [newBattery, setNewBattery] = useState(100);
   const [newSignal, setNewSignal] = useState(85);
+
+  // QR Code Scanner State variables
+  const [addMode, setAddMode] = useState<'qr' | 'manual'>('qr');
+  const [qrScanning, setQrScanning] = useState(false);
+  const [qrMessage, setQrMessage] = useState('');
+  const [scannedResult, setScannedResult] = useState<any | null>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Stop camera on unmount or mode toggle
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const handleStartCamera = async () => {
+    setCameraError(null);
+    setCameraActive(true);
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } 
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } else {
+        setCameraError("Webcam stream is unsupported in this browser environment. Using holographic simulation scan.");
+      }
+    } catch (err: any) {
+      console.warn("Camera streaming failed", err);
+      setCameraError("Camera permission blocked or device unavailable. Running with active network simulator scanning.");
+    }
+  };
+
+  const handleStopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const handlePresetScan = (presetName: string, presetType: 'solar' | 'community_server' | 'drone_repeater' | 'satellite_uplink', defaultBattery: number, defaultSignal: number, defaultBandwidth: number) => {
+    setQrScanning(true);
+    setScannedResult(null);
+    setQrMessage("Decrypting node key certificate signatures...");
+    
+    setTimeout(() => {
+      setQrMessage("Validating decentralized spectrum protocol metadata...");
+      setTimeout(() => {
+        setQrScanning(false);
+        setQrMessage("");
+        setScannedResult({
+          id: `qr-node-${Math.floor(1000 + Math.random() * 9000)}`,
+          name: presetName,
+          type: presetType,
+          battery: defaultBattery,
+          signal: defaultSignal,
+          bandwidth: defaultBandwidth,
+          activeUsers: 0
+        });
+      }, 900);
+    }, 700);
+  };
+
+  const handleRegisterScannedNode = () => {
+    if (!scannedResult) return;
+    
+    const newNode: MeshNode = {
+      id: scannedResult.id,
+      name: scannedResult.name,
+      status: 'online',
+      type: scannedResult.type,
+      battery: scannedResult.battery,
+      signal: scannedResult.signal,
+      activeUsers: scannedResult.activeUsers,
+      bandwidth: scannedResult.bandwidth,
+      locX: Math.floor(Math.random() * 50) + 25,
+      locY: Math.floor(Math.random() * 50) + 25,
+      lastSync: 'Scanned Node Connected'
+    };
+
+    onAddNode(newNode);
+    setSelectedNode(newNode);
+    setScannedResult(null);
+    setShowAddForm(false);
+    handleStopCamera();
+  };
+
+  // Mock File Decryptor
+  const handleQrFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setQrScanning(true);
+      setScannedResult(null);
+      setQrMessage(`Decoding QR raw image file: ${file.name}...`);
+      
+      setTimeout(() => {
+        setQrScanning(false);
+        setQrMessage("");
+        setScannedResult({
+          id: `qr-file-${Math.floor(1000 + Math.random() * 9000)}`,
+          name: `${file.name.split('.')[0]} Relay`,
+          type: 'solar',
+          battery: 95,
+          signal: 90,
+          bandwidth: 35,
+          activeUsers: 0
+        });
+      }, 1200);
+    }
+  };
 
   const handleAddNode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,81 +430,296 @@ export default function NetworkHub({
         {/* Selected Node Details or Add Relay Form inside right side panel */}
         <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs">
           {showAddForm ? (
-            <form onSubmit={handleAddNode} className="space-y-4" id="form-add-relay">
+            <div className="space-y-4 font-sans" id="relay-add-container">
+              {/* Add Custom scan laser inline style keyframe definitions safely */}
+              <style>{`
+                @keyframes qr-laser-sweep {
+                  0% { top: 0%; opacity: 0.6; }
+                  50% { top: 100%; opacity: 1; }
+                  100% { top: 0%; opacity: 0.6; }
+                }
+                .sweep-laser {
+                  animation: qr-laser-sweep 2.2s infinite linear;
+                }
+              `}</style>
+
               <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Configure New Relay</h3>
+                <div className="flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-indigo-500 animate-[pulse_1.5s_infinite]" />
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">Register Hardware</h3>
+                </div>
                 <button 
                   type="button" 
-                  onClick={() => setShowAddForm(false)}
-                  className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                  onClick={() => { setShowAddForm(false); handleStopCamera(); }}
+                  className="text-xs text-zinc-400 hover:text-zinc-650 dark:hover:text-zinc-200"
                 >
                   Cancel
                 </button>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Grid/Node Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. West Valley School"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg focus:outline-hidden focus:border-indigo-500 text-zinc-900 dark:text-zinc-100"
-                  id="input-new-node-name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Transmission Category</label>
-                <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as any)}
-                  className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
-                  id="select-new-node-type"
+              {/* Mode segmented control switcher */}
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-950 rounded-xl text-xs font-semibold">
+                <button 
+                  type="button"
+                  onClick={() => { setAddMode('qr'); handleStopCamera(); }}
+                  className={`grow py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    addMode === 'qr' 
+                      ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white border border-zinc-250/20' 
+                      : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                  }`}
+                  id="tab-qr-mode"
                 >
-                  <option value="solar">Solar-powered Mesh</option>
-                  <option value="satellite_uplink">Satellite Ground Station</option>
-                  <option value="community_server">Local Cache Server</option>
-                  <option value="drone_repeater">Aerial Swarm Link</option>
-                </select>
+                  <QrCode className="w-3.5 h-3.5" />
+                  QR Scan Mode
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setAddMode('manual'); handleStopCamera(); }}
+                  className={`grow py-1.5 rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    addMode === 'manual' 
+                      ? 'bg-white dark:bg-zinc-900 shadow-xs text-zinc-900 dark:text-white border border-zinc-250/20' 
+                      : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                  }`}
+                  id="tab-manual-mode"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  Manual Config
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Initial Battery (%)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={newBattery}
-                    onChange={(e) => setNewBattery(Number(e.target.value))}
-                    className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
-                    id="input-new-node-battery"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Signal (dBm/%)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={newSignal}
-                    onChange={(e) => setNewSignal(Number(e.target.value))}
-                    className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
-                    id="input-new-node-signal"
-                  />
-                </div>
-              </div>
+              {addMode === 'qr' ? (
+                <div className="space-y-4" id="mesh-qr-scanner-workspace">
+                  {/* Visual Viewport frame box */}
+                  <div className="relative aspect-video rounded-xl border border-zinc-255 dark:border-zinc-800 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+                    {/* Viewport ambient crosshairs graphics */}
+                    <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-indigo-500" />
+                    <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-indigo-500" />
+                    <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-indigo-500" />
+                    <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-indigo-500" />
 
-              <button
-                type="submit"
-                className="w-full text-xs font-semibold py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl hover:bg-zinc-800 transition-colors"
-                id="btn-submit-add-node"
-              >
-                Provision & Connect Relay
-              </button>
-            </form>
+                    {cameraActive ? (
+                      <div className="w-full h-full relative">
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          playsInline 
+                          muted 
+                          className="w-full h-full object-cover opacity-80"
+                        />
+                        <button 
+                          onClick={handleStopCamera}
+                          className="absolute bottom-2 right-2 bg-zinc-900/80 hover:bg-zinc-900 text-white rounded-lg px-2 py-1 text-[10px] uppercase font-mono border border-zinc-800"
+                        >
+                          Disable Feed
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4 text-zinc-500 space-y-1.5">
+                        <Camera className="w-7 h-7 mx-auto text-zinc-700 dark:text-zinc-500 animate-pulse" />
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Scanner Viewport Idle</p>
+                        <p className="text-[9px] text-zinc-550 max-w-[200px] leading-relaxed mx-auto">Launch webcam feeds or select a hardware preset below.</p>
+                        <button
+                          type="button"
+                          onClick={handleStartCamera}
+                          className="mt-2 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 text-indigo-400 border border-indigo-900/45 hover:bg-indigo-950/20 rounded-md transition-colors"
+                        >
+                          Enable Physical Camera
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Animated Holographic sweeping scan line */}
+                    {(cameraActive || qrScanning) && (
+                      <div className="absolute inset-x-0 h-[1.5px] bg-emerald-400 shadow-[0_0_8px_#10b981] sweep-laser pointer-events-none" />
+                    )}
+
+                    {/* Pending decoding labels overlay */}
+                    {qrScanning && (
+                      <div className="absolute inset-0 bg-black/75 backdrop-blur-[1px] flex flex-col items-center justify-center p-3 text-center">
+                        <RefreshCw className="w-6 h-6 text-emerald-400 animate-spin mb-2" />
+                        <p className="text-xs font-mono text-emerald-400 animate-pulse">{qrMessage}</p>
+                        <span className="text-[9px] text-zinc-500 mt-1 uppercase tracking-widest">HOLOGRAPHIC DIAGNOSTICS ACTIVE</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {cameraError && (
+                    <div className="p-3 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-150 dark:border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 leading-normal">
+                      Note: {cameraError}
+                    </div>
+                  )}
+
+                  {/* Scanned Data Results Display */}
+                  {scannedResult ? (
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-800/30 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between border-b border-emerald-200/50 dark:border-emerald-900/30 pb-2">
+                        <span className="text-[10px] uppercase font-mono font-bold text-emerald-805 dark:text-emerald-400 tracking-wide flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                          Validated Hardware Node Certificate
+                        </span>
+                        <button 
+                          onClick={() => setScannedResult(null)}
+                          className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-[9px] text-zinc-450 dark:text-zinc-505 block">Hardware Name</span>
+                          <span className="font-semibold text-zinc-950 dark:text-white">{scannedResult.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-zinc-450 dark:text-zinc-505 block">Category</span>
+                          <span className="font-mono uppercase tracking-wide text-zinc-850 dark:text-zinc-200">{scannedResult.type.replace('_', ' ')}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-zinc-450 dark:text-zinc-505 block">Battery Health</span>
+                          <span className="font-semibold text-zinc-950 dark:text-white">{scannedResult.battery}% Cells Ready</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-zinc-450 dark:text-zinc-505 block">RSSI Sync Signal</span>
+                          <span className="font-semibold text-zinc-950 dark:text-white">{scannedResult.signal}% Peak</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleRegisterScannedNode}
+                        className="w-full text-xs font-bold py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+                      >
+                        Register Scanned Node to Topology
+                      </button>
+                    </div>
+                  ) : (
+                    /* Preset scanning simulators */
+                    <div className="space-y-3">
+                      <div>
+                        <span className="text-[9px] font-bold font-mono text-zinc-400 uppercase tracking-wider block mb-1.5">Preset Hardware Scan Simulation</span>
+                        <div className="grid grid-cols-1 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handlePresetScan('High-Gain Solar Pod', 'solar', 100, 95, 30)}
+                            className="p-2.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-xl hover:border-indigo-500 text-left transition-all flex items-center justify-between group"
+                          >
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold text-zinc-900 dark:text-white block truncate">High-Gain Solar Relay Pod (SL-X9)</span>
+                              <span className="text-[9px] font-mono text-zinc-400">Class: Solar Mesh • Decoded Signal: 95%</span>
+                            </div>
+                            <QrCode className="w-4 h-4 text-zinc-400 group-hover:text-indigo-500 shrink-0 ml-2" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handlePresetScan('Cooperative Cloud Vault', 'community_server', 100, 88, 55)}
+                            className="p-2.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-xl hover:border-indigo-500 text-left transition-all flex items-center justify-between group"
+                          >
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold text-zinc-900 dark:text-white block truncate">Local Cache Community Vault (CS-U5)</span>
+                              <span className="text-[9px] font-mono text-zinc-400">Class: Micro-Server • Decoded Signal: 88%</span>
+                            </div>
+                            <QrCode className="w-4 h-4 text-zinc-400 group-hover:text-indigo-500 shrink-0 ml-2" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handlePresetScan('Air Swarm Linker', 'drone_repeater', 78, 70, 25)}
+                            className="p-2.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-xl hover:border-indigo-500 text-left transition-all flex items-center justify-between group"
+                          >
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold text-zinc-900 dark:text-white block truncate">Air Swarm Aerial Repeater (DS-X9)</span>
+                              <span className="text-[9px] font-mono text-zinc-400">Class: Drone Linker • Decoded Signal: 70%</span>
+                            </div>
+                            <QrCode className="w-4 h-4 text-zinc-400 group-hover:text-indigo-500 shrink-0 ml-2" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* File Qr Dropper Upload panel */}
+                      <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-center bg-zinc-50/50 dark:bg-zinc-950/30">
+                        <label className="cursor-pointer block">
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={handleQrFileUpload}
+                            className="hidden" 
+                          />
+                          <p className="text-[10px] text-zinc-400 font-sans">
+                            Or <span className="text-indigo-500 font-semibold underline">upload QR image code</span> directly to ingest signature key configurations
+                          </p>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleAddNode} className="space-y-3" id="form-add-relay">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Grid/Node Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. West Valley School"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg focus:outline-hidden focus:border-indigo-500 text-zinc-900 dark:text-zinc-100"
+                      id="input-new-node-name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Transmission Category</label>
+                    <select
+                      value={newType}
+                      onChange={(e) => setNewType(e.target.value as any)}
+                      className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
+                      id="select-new-node-type"
+                    >
+                      <option value="solar">Solar-powered Mesh</option>
+                      <option value="satellite_uplink">Satellite Ground Station</option>
+                      <option value="community_server">Local Cache Server</option>
+                      <option value="drone_repeater">Aerial Swarm Link</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Initial Battery (%)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={newBattery}
+                        onChange={(e) => setNewBattery(Number(e.target.value))}
+                        className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
+                        id="input-new-node-battery"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-zinc-400 tracking-wider uppercase mb-1">Signal (dBm/%)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={newSignal}
+                        onChange={(e) => setNewSignal(Number(e.target.value))}
+                        className="w-full text-xs px-3 py-2 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 rounded-lg text-zinc-900 dark:text-zinc-100"
+                        id="input-new-node-signal"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full text-xs font-semibold py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl hover:bg-zinc-800 transition-colors"
+                    id="btn-submit-add-node"
+                  >
+                    Provision & Connect Relay
+                  </button>
+                </form>
+              )}
+            </div>
           ) : selectedNode ? (
             <div className="space-y-6" id="telemetry-panel">
               <div>

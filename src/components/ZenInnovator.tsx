@@ -14,7 +14,12 @@ import {
   Minimize2, 
   Bookmark, 
   Activity,
-  Award
+  Award,
+  Key,
+  ShieldCheck,
+  Copy,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export default function ZenInnovator() {
@@ -128,6 +133,19 @@ export default function ZenInnovator() {
     setInnovatorTitle(tempTitle);
     setInnovatorBio(tempBio);
     setIsEditing(false);
+  };
+
+  const [showKeysConsole, setShowKeysConsole] = useState<boolean>(false);
+  const [revealKey, setRevealKey] = useState<boolean>(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const apiKeyVal = (import.meta as any).env.VITE_MEMBER_API_KEY || "sk-SbR61GRDMhXpIgKbZpXVEqWa56490_HsQxy8zF-2m6Cjfk8cvOPppHIN4WByvTP-";
+  const pubKeyVal = (import.meta as any).env.VITE_COMPANION_PUBLIC_KEY || "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDtPZRsdUv4uZobYpgIEyLbWZraJVGHznz3dasR56gMHAt2Eaw7Nx2nG0poVxyX+vFrYei6Bs2BcWeOJoITIH0kHepjfQ59fj5f9dCgyKsNTV4i3GG/Eg30DWHZmtjMZC4mQJXtqsakhZF5KTekQCL4hUSg54E3rG9uis3Gmt2nJwIDAQAB";
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(label);
+    setTimeout(() => setCopiedKey(null), 3000);
   };
 
   const handleCancelEdits = () => {
@@ -330,6 +348,94 @@ export default function ZenInnovator() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Interactive Cryptographic Key Management Console */}
+      <div className="mt-2 text-zinc-900 dark:text-white">
+        <button
+          type="button"
+          onClick={() => setShowKeysConsole(!showKeysConsole)}
+          className="w-full text-[9px] font-mono font-bold uppercase tracking-wider py-1.5 px-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors flex items-center justify-between group"
+          id="btn-toggle-cred-keys"
+        >
+          <span className="flex items-center gap-1.5 text-zinc-650 dark:text-zinc-350">
+            <Key className="w-3.5 h-3.5 text-indigo-500 animate-pulse" />
+            Certificates & API Keys
+          </span>
+          <span className="text-[8px] text-indigo-600 dark:text-indigo-400 font-bold group-hover:underline">
+            {showKeysConsole ? 'Hide' : 'Manage'}
+          </span>
+        </button>
+
+        {showKeysConsole && (
+          <div className="mt-2 p-3 bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-zinc-805 rounded-xl space-y-2.5 animate-[fadeIn_0.2s_ease-out]">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 pb-1">
+              <span className="text-[8px] font-mono font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                Active Signatures Center
+              </span>
+              <span className="text-[7.5px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-1 py-0.2 rounded font-mono">
+                SECURED
+              </span>
+            </div>
+
+            {/* API Key Parameter */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] font-bold uppercase font-mono text-zinc-400">Merchant Client API Token</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setRevealKey(!revealKey)}
+                    className="p-0.5 text-zinc-400 hover:text-indigo-500 rounded transition-colors"
+                    title={revealKey ? "Hide API key" : "Reveal API key"}
+                  >
+                    {revealKey ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(apiKeyVal, 'api')}
+                    className="p-0.5 text-zinc-400 hover:text-indigo-500 rounded transition-colors"
+                    title="Copy API key value"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                  </button>
+                  {copiedKey === 'api' && (
+                    <span className="text-[7px] text-emerald-600 dark:text-emerald-400 font-bold uppercase font-mono">Copied</span>
+                  )}
+                </div>
+              </div>
+              <div className="p-1 px-1.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded font-mono text-[8px] leading-tight select-all truncate text-zinc-600 dark:text-zinc-300">
+                {revealKey ? apiKeyVal : "sk-SbR61GRDMhX•••••••••••••••••••••••••••••••••"}
+              </div>
+            </div>
+
+            {/* RSA Public Key Parameter */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] font-bold uppercase font-mono text-zinc-400">Host RSA Verification Signature Key</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(pubKeyVal, 'pub')}
+                    className="p-0.5 text-zinc-400 hover:text-indigo-500 rounded transition-colors"
+                    title="Copy Public Key signature"
+                  >
+                    <Copy className="w-2.5 h-2.5" />
+                  </button>
+                  {copiedKey === 'pub' && (
+                    <span className="text-[7px] text-emerald-600 dark:text-emerald-400 font-bold uppercase font-mono">Copied</span>
+                  )}
+                </div>
+              </div>
+              <div className="relative">
+                <div className="p-1 px-1.5 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded font-mono text-[7px] leading-relaxed select-all h-12 overflow-y-auto break-all text-zinc-650 dark:text-zinc-400">
+                  {pubKeyVal}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-2.5 flex items-center justify-between text-[8px] font-mono font-bold text-zinc-400 uppercase tracking-widest z-10">
