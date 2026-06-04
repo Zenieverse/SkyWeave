@@ -30,6 +30,7 @@ export default function ZenInnovator() {
   const [imageUrl, setImageUrl] = useState<string | null>(() => {
     return localStorage.getItem('skyweave_zen_image') || null;
   });
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [tempName, setTempName] = useState<string>(innovatorName);
@@ -38,6 +39,23 @@ export default function ZenInnovator() {
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if current user profile is modified from developer defaults
+  const isModified = innovatorName !== 'Zen' || 
+    innovatorTitle !== 'Lead Platform Innovator' || 
+    innovatorBio !== 'Bridging the global digital equity gap utilizing decentralized solar-repeater mesh. Syncing next-gen seeds telemetry.' || 
+    imageUrl !== null;
+
+  const handleResetToDefault = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInnovatorName('Zen');
+    setInnovatorTitle('Lead Platform Innovator');
+    setInnovatorBio('Bridging the global digital equity gap utilizing decentralized solar-repeater mesh. Syncing next-gen seeds telemetry.');
+    setImageUrl(null);
+    setTempName('Zen');
+    setTempTitle('Lead Platform Innovator');
+    setTempBio('Bridging the global digital equity gap utilizing decentralized solar-repeater mesh. Syncing next-gen seeds telemetry.');
+  };
 
   // Synchronize values to localStorage
   useEffect(() => {
@@ -73,9 +91,11 @@ export default function ZenInnovator() {
 
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Highly resilient logs format warning: Please select an image file (.png, .jpg, .webp).');
+      setUploadError('Form rejection alert: Image required (.png, .jpg, or .webp only).');
+      setTimeout(() => setUploadError(null), 5000);
       return;
     }
+    setUploadError(null);
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -192,36 +212,66 @@ export default function ZenInnovator() {
         <div className="space-y-3 z-10">
           
           <div className="flex items-start justify-between">
-            <div className="space-y-0.5">
-              <span className="text-[10px] uppercase font-mono font-bold tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-indigo-500" />
-                Featured Innovator
-              </span>
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5 mt-0.5">
-                {innovatorName}
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Online Sync Verified" />
-              </h3>
-              <p className="text-[10px] text-zinc-400 italic">{innovatorTitle}</p>
+            <div className="flex items-center gap-2.5 max-w-[80%]">
+              {/* Profile Avatar bubble */}
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-zinc-200 dark:border-zinc-800 shrink-0 select-none shadow-xs flex items-center justify-center relative bg-zinc-50 dark:bg-zinc-950">
+                {imageUrl ? (
+                  <img src={imageUrl} alt={innovatorName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-full h-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold font-sans">
+                    {innovatorName.trim() ? innovatorName.trim().charAt(0).toUpperCase() : 'Z'}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[9px] uppercase font-mono font-bold tracking-widest text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-indigo-550" />
+                  Featured Innovator
+                </span>
+                <h3 className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1 truncate">
+                  {innovatorName}
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Online Sync Verified" />
+                </h3>
+                <p className="text-[9px] text-zinc-400 italic truncate">{innovatorTitle}</p>
+              </div>
             </div>
             
-            <button
-              onClick={() => {
-                setTempName(innovatorName);
-                setTempTitle(innovatorTitle);
-                setTempBio(innovatorBio);
-                setIsEditing(true);
-              }}
-              className="p-1.5 border border-zinc-250 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-zinc-400 hover:text-zinc-650 hover:dark:text-zinc-300 transition-colors"
-              id="btn-edit-zen"
-              title="Edit Profile Details"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {isModified && (
+                <button
+                  type="button"
+                  onClick={handleResetToDefault}
+                  className="px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded transition-colors"
+                  title="Reset profile data back to developer default values"
+                >
+                  Reset
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setTempName(innovatorName);
+                  setTempTitle(innovatorTitle);
+                  setTempBio(innovatorBio);
+                  setIsEditing(true);
+                }}
+                className="p-1 px-1.5 border border-zinc-250 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-zinc-400 hover:text-zinc-650 hover:dark:text-zinc-300 transition-colors"
+                id="btn-edit-zen"
+                title="Edit Profile Details"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-sans leading-normal">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-sans leading-relaxed">
             "{innovatorBio}"
           </p>
+        </div>
+      )}
+
+      {uploadError && (
+        <div className="mt-2 pt-1 text-[9px] text-center font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/25 border border-rose-100 dark:border-rose-950/40 p-1.5 rounded-lg">
+          {uploadError}
         </div>
       )}
 

@@ -65,6 +65,7 @@ export default function CommerceFintech({
   const [transferResult, setTransferResult] = useState('');
   const [isPassiveGenerating, setIsPassiveGenerating] = useState(true);
   const [passiveEarnings, setPassiveEarnings] = useState(0);
+  const [walletFeedback, setWalletFeedback] = useState<string>('');
 
   // Micro savings inputs
   const [savingsDeposit, setSavingsDeposit] = useState('');
@@ -137,7 +138,8 @@ export default function CommerceFintech({
     if (!pledge || pledge <= 0) return;
 
     if (walletBalance < pledge) {
-      alert('Error: Insufficient cooperative credits in your wallet.');
+      setWalletFeedback('Error: Insufficient cooperative credits in your wallet for microfinance pledge.');
+      setTimeout(() => setWalletFeedback(''), 4000);
       return;
     }
 
@@ -149,6 +151,8 @@ export default function CommerceFintech({
       'transfer',
       networkStatus === 'offline'
     );
+    setWalletFeedback(`Success! Funded ${pledge} credits to loan #${loanId.slice(-4).toUpperCase()}.`);
+    setTimeout(() => setWalletFeedback(''), 4000);
   };
 
   const executeP2PTransfer = (e: React.FormEvent) => {
@@ -180,7 +184,8 @@ export default function CommerceFintech({
     if (!sum || sum <= 0) return;
 
     if (walletBalance < sum) {
-      alert('Insufficient wallet credit.');
+      setWalletFeedback('Error: Insufficient cooperative wallet credits for Susu pool deposit.');
+      setTimeout(() => setWalletFeedback(''), 4000);
       return;
     }
 
@@ -192,6 +197,8 @@ export default function CommerceFintech({
     );
     setSavingsPoolBalance(prev => prev + sum);
     setSavingsDeposit('');
+    setWalletFeedback(`Success! Deposited ${sum} credits into local Susu Cooperative Pool.`);
+    setTimeout(() => setWalletFeedback(''), 4000);
   };
 
   return (
@@ -413,7 +420,26 @@ export default function CommerceFintech({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="skypay-finance-view">
+        <div className="space-y-4" id="skypay-finance-wrapper">
+          {walletFeedback && (
+            <div className={`p-4 rounded-xl border text-xs font-semibold ${
+              walletFeedback.startsWith('Error') 
+                ? 'bg-rose-50 border-rose-200 text-rose-850 dark:bg-rose-950/20 dark:border-rose-900/30' 
+                : 'bg-emerald-50 border-emerald-200 text-emerald-805 dark:bg-emerald-950/20 dark:border-emerald-900/30'
+            }`}>
+              {walletFeedback}
+            </div>
+          )}
+          {transferResult && (
+            <div className={`p-4 rounded-xl border text-xs font-semibold ${
+              transferResult.startsWith('Error') 
+                ? 'bg-rose-50 border-rose-200 text-rose-850 dark:bg-rose-950/20 dark:border-rose-900/30' 
+                : 'bg-emerald-50 border-emerald-200 text-emerald-805 dark:bg-emerald-950/20 dark:border-emerald-900/30'
+            }`}>
+              {transferResult}
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="skypay-finance-view">
           
           {/* SkyPay Wallet Card mockup */}
           <div className="space-y-6">
@@ -624,6 +650,7 @@ export default function CommerceFintech({
           </div>
 
         </div>
+      </div>
       )}
     </div>
   );

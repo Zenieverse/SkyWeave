@@ -45,6 +45,8 @@ export default function GovernanceImpact({
 
   // Voting feedback states
   const [votedMap, setVotedMap] = useState<Record<string, boolean>>({});
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
 
   const handleCreateProposal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,13 +346,32 @@ export default function GovernanceImpact({
               </p>
 
               <button 
-                onClick={() => alert('Compiling SkyWeave regional compliance analytics report... Exported secure checksum bundle.')}
-                className="w-full text-xs font-semibold py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  setIsExporting(true);
+                  setExportMessage('Generating compliance cryptographic checksum bundle according to DPG specifications...');
+                  setTimeout(() => {
+                    setExportMessage('Success! Complied and saved secure regional index checksum cluster signature to memory storage.');
+                    setIsExporting(false);
+                    setTimeout(() => setExportMessage(''), 4500);
+                  }, 1800);
+                }}
+                disabled={isExporting}
+                className="w-full text-xs font-semibold py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                 id="btn-export-reports"
               >
-                <Download className="w-4 h-4" />
-                Export PDF Audit Log Checksums
+                <Download className={`w-4 h-4 ${isExporting ? 'animate-spin' : ''}`} />
+                {isExporting ? 'Compiling Audit Logs...' : 'Export PDF Audit Log Checksums'}
               </button>
+
+              {exportMessage && (
+                <div className={`p-3 rounded-lg text-[10px] font-mono leading-normal ${
+                  exportMessage.startsWith('Success') 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/20' 
+                    : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-650 dark:text-zinc-400 border border-zinc-250 dark:border-zinc-800 animate-pulse'
+                }`}>
+                  {exportMessage}
+                </div>
+              )}
             </div>
           </div>
 
