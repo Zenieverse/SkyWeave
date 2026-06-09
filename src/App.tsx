@@ -198,6 +198,28 @@ export default function App() {
     addNotification(`Consensus DAO: Cryptographic voting key submitted for Ballot #${proposalId.slice(-4).toUpperCase()}.`);
   };
 
+  const handleGridSync = () => {
+    const nextStatus = networkStatus === 'offline' ? 'online' : 'offline';
+    setNetworkStatus(nextStatus);
+
+    if (nextStatus === 'online') {
+      // Restore all offline nodes, top off battery levels, and improve signal coverage
+      setNodes(prev => prev.map(n => ({
+        ...n,
+        status: n.status === 'offline' ? 'online' : n.status,
+        battery: Math.min(100, Math.max(n.battery, 85)),
+        signal: Math.min(100, Math.max(n.signal, 80))
+      })));
+
+      // Synchronize all transaction records inside the ledger
+      setLedger(prev => prev.map(entry => ({ ...entry, isOffline: false })));
+
+      addNotification('Global Grid Sync Completed: Resolved offline transaction queues, updated sensor battery levels, and filed registered patient triage checklists.');
+    } else {
+      addNotification('Offline Buffer Switched: Localized cache database active. All outgoing transmission queues are securely buffered.');
+    }
+  };
+
   // Helper dictionary guiding roles perspective layouts
   const getUserTypeGuide = (role: UserType) => {
     switch (role) {
@@ -226,7 +248,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-base font-bold text-zinc-950 dark:text-white tracking-tight font-sans">SkyWeave Platform</h1>
-              <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-zinc-400">Decentralized Global Connectivity</p>
+              <p className="text-[10px] uppercase font-mono font-bold tracking-widest text-zinc-450">Decentralized Global Connectivity</p>
             </div>
           </div>
 
@@ -255,7 +277,12 @@ export default function App() {
             </select>
             
             {/* Global synchronized network trigger display status */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/50 dark:border-zinc-810 rounded-lg text-xs font-mono">
+            <button
+              onClick={handleGridSync}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-lg text-xs font-mono hover:bg-zinc-100 dark:hover:bg-zinc-900 focus:outline-hidden transition-all duration-200 cursor-pointer text-left"
+              title="Click to toggle Network mode and trigger manual Grid Sync"
+              id="btn-grid-sync"
+            >
               {networkStatus === 'offline' ? (
                 <>
                   <WifiOff className="w-3.5 h-3.5 text-amber-500 animate-bounce" />
@@ -264,10 +291,10 @@ export default function App() {
               ) : (
                 <>
                   <Wifi className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-zinc-500">GRID SYNCED</span>
+                  <span className="text-emerald-500 font-bold">GRID SYNCED</span>
                 </>
               )}
-            </div>
+            </button>
           </div>
 
         </div>
