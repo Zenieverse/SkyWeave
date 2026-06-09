@@ -6,7 +6,8 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/16ca9593-174c-4291-8b88-dd4d08ec0d9b
+View your app in AI Studio: https://ai.studio/apps/16ca9593-174c-4291-8b88-dd4d08ec0d9b 
+or @ https://skyweave-connectivity-hub-764082783379.us-west1.run.app
 
 ## Run Locally
 
